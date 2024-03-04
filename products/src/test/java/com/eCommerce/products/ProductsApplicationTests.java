@@ -69,4 +69,10 @@ class ProductsApplicationTests {
 	
 	}
 
+	@Test
+	void shouldRetrieveObject() throws Exception{
+		mockMvc.perform(MockMvcRequestBuilders.get("/api/product"))
+						.andExpect(status().isOk());
+	}
+
 }
