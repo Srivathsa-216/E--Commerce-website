@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import com.eCommerce.orderservice.dto.OrderLineItemsDto;
 import com.eCommerce.orderservice.dto.OrderRequest;
@@ -21,6 +22,7 @@ public class OrderService {
 
 
     private final OrderRepository orderRepository;
+    private final WebClient webClient;
 
     public void placeOrder(OrderRequest orderRequest){
         Order order = new Order();
@@ -32,7 +34,21 @@ public class OrderService {
 
         order.setOrderLineItems(orderLineItems);
 
-        orderRepository.save(order);
+        //Call Inventory Service in order to check wheather there is 
+        // Suffiecent stock
+        Boolean result = webClient.get()
+                    .uri("http://localhost:8082/api/inventory/")
+                    .retrieve()
+                    .bodyToMono(Boolean.class)
+                    .block();
+
+        if( result ){
+            orderRepository.save(order);
+        }
+        else{
+            throw new IllegalArgumentException("Product is Out of Stock or available lesser compared to the requested quantity, Please Try again after some time");
+        }
+        
     }
 
     private OrderLineItems mapToDto(OrderLineItemsDto orderLineItemsDto){
