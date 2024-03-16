@@ -1,5 +1,6 @@
 package com.eCommerce.orderservice.service;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -7,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import com.eCommerce.orderservice.dto.InventoryResponse;
 import com.eCommerce.orderservice.dto.OrderLineItemsDto;
 import com.eCommerce.orderservice.dto.OrderRequest;
 import com.eCommerce.orderservice.model.Order;
@@ -34,15 +36,24 @@ public class OrderService {
 
         order.setOrderLineItems(orderLineItems);
 
+        List<String> skuCodes = order.getOrderLineItems().stream()
+                    .map(OrderLineItems::getSkuCode)
+                    .toList();
+
         //Call Inventory Service in order to check wheather there is 
         // Suffiecent stock
-        Boolean result = webClient.get()
-                    .uri("http://localhost:8082/api/inventory/")
+        InventoryResponse[] inventoryResponsesArray = webClient.get()
+                    .uri("http://localhost:8083/api/inventory",
+                        uriBuilder -> uriBuilder.queryParam("skuCode", skuCodes).build())
                     .retrieve()
-                    .bodyToMono(Boolean.class)
+                    .bodyToMono(InventoryResponse[].class)
                     .block();
 
-        if( result ){
+        boolean allProductsInStock = Arrays.stream(inventoryResponsesArray)
+            .allMatch(InventoryResponse::isInStock);
+
+        
+        if( allProductsInStock ){
             orderRepository.save(order);
         }
         else{
