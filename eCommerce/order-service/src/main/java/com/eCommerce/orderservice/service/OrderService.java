@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -11,6 +12,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import com.eCommerce.orderservice.dto.InventoryResponse;
 import com.eCommerce.orderservice.dto.OrderLineItemsDto;
 import com.eCommerce.orderservice.dto.OrderRequest;
+import com.eCommerce.orderservice.event.OrderPlacedEvent;
 import com.eCommerce.orderservice.model.Order;
 import com.eCommerce.orderservice.model.OrderLineItems;
 import com.eCommerce.orderservice.repository.OrderRepository;
@@ -25,8 +27,9 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final WebClient.Builder webClientBuilder;
+    private final KafkaTemplate<String, OrderPlacedEvent> kafkaTemplate;
 
-    public void placeOrder(OrderRequest orderRequest){
+    public String placeOrder(OrderRequest orderRequest){
         Order order = new Order();
         order.setOrderNumber(UUID.randomUUID().toString());
 
@@ -55,6 +58,8 @@ public class OrderService {
         
         if( allProductsInStock ){
             orderRepository.save(order);
+            kafkaTemplate.send("NotifactionTopic", new OrderPlacedEvent(order.getOrderNumber()));
+            return "Order Placed Successfuly";
         }
         else{
             throw new IllegalArgumentException("Product is Out of Stock or available lesser compared to the requested quantity, Please Try again after some time");
