@@ -12,6 +12,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import com.eCommerce.orderservice.dto.InventoryResponse;
 import com.eCommerce.orderservice.dto.OrderLineItemsDto;
 import com.eCommerce.orderservice.dto.OrderRequest;
+import com.eCommerce.orderservice.event.OrderPlacedEvent;
 import com.eCommerce.orderservice.model.Order;
 import com.eCommerce.orderservice.model.OrderLineItems;
 import com.eCommerce.orderservice.repository.OrderRepository;
@@ -26,7 +27,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final WebClient.Builder webClientBuilder;
-    private final KafkaTemplate kafkaTemplate;
+    private final KafkaTemplate<String, OrderPlacedEvent> kafkaTemplate;
 
     public String placeOrder(OrderRequest orderRequest){
         Order order = new Order();
@@ -57,7 +58,7 @@ public class OrderService {
         
         if( allProductsInStock ){
             orderRepository.save(order);
-            kafkaTemplate.send("NotifactionTopic", order.getOrderNumber());
+            kafkaTemplate.send("NotifactionTopic", new OrderPlacedEvent(order.getOrderNumber()));
             return "Order Placed Successfuly";
         }
         else{
