@@ -28,5 +28,4 @@ Ensures robust security by integrating Keycloak, an open-source identity and acc
 * Spring Boot
 * Spring Cloud
 * Keycloak
-* RabbitMQ
 * ELK Stack
